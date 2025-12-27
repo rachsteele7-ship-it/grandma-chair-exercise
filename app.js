@@ -84,14 +84,18 @@
     const setText = `${setNo}/${SETTINGS.sets}세트`;
     const repText = `${repNo}/${SETTINGS.repsPerSide}회`;
 
-    // 올리기 (카운트 있음)
+    // 올리기: UI 먼저 + 음성 동시
+    setLines(`${sideText} 다리 올리세요`, `${setText} · ${repText}`, `${SETTINGS.liftSeconds}초`);
     await queueSpeech(`${sideText} 다리 올리세요`);
+    
     await syncedCountdown(SETTINGS.liftSeconds, (s) => {
       setLines(`${sideText} 다리 올리세요`, `${setText} · ${repText}`, `${s}초`);
     });
 
-    // 내리기 (카운트 없음, 조용히 쉬기)
+    // 내리기: UI 먼저 + 음성 동시 (카운트 없음)
+    setLines(`${sideText} 다리 내리세요`, `${setText} · ${repText}`, `${SETTINGS.lowerSeconds}초`);
     await queueSpeech(`${sideText} 다리 내리세요`);
+    
     for (let s = SETTINGS.lowerSeconds; s >= 1; s -= 1) {
       setLines(`${sideText} 다리 내리세요`, `${setText} · ${repText}`, `${s}초`);
       await delay(1000);
@@ -106,17 +110,19 @@
 
   async function doSet(setNo) {
     const prepMsg = `${setNo}세트 시작합니다. 준비하세요.`;
+    setLines(prepMsg, '', `${SETTINGS.prepSeconds}초`);
     await queueSpeech(prepMsg);
 
     await syncedCountdown(SETTINGS.prepSeconds, (s) => {
       setLines(prepMsg, '', `${s}초`);
-    }, 'prep'); // 카운트 음성 없음
+    }, 'prep');
 
     await doSide({ setNo, side: 'L' });
     await doSide({ setNo, side: 'R' });
 
     if (setNo < SETTINGS.sets) {
-      const doneMsg = `${setNo}세트 완료. ${setNo + 1}세트 준비하세요`;
+      const nextSet = setNo + 1;
+      const doneMsg = `${setNo}번째 세트 완료. ${nextSet}번째 세트 준비합니다.`;
       setLines(doneMsg, '', '');
       await queueSpeech(doneMsg);
       await delay(1000);
