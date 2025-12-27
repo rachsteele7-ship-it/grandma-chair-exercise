@@ -135,8 +135,11 @@
       await queueSpeech(doneMsg);
       await delay(1000);
     } else {
-      const finishMsg = '오늘 운동 완료! 수고하셨습니다 👍';
-      setLines(finishMsg, '', '잘하셨어요!');
+      // ✅ 음성과 화면 분리! 이모지 TTS 안 읽힘
+      const finishMsg = '오늘 운동 완료! 수고하셨습니다';
+      const displayMsg = finishMsg + ' 👍';
+      
+      setLines(displayMsg, '', '잘하셨어요!');
       await queueSpeech(finishMsg);
     }
   }
@@ -149,7 +152,7 @@
     startBtn.textContent = '진행 중...';
 
     try {
-      // ✅ ~ 제거로 모든 기기 호환
+      // ✅ ~ 완전 제거로 모든 기기 호환
       const postureMsg = '의자에 엉덩이 완전히 붙이고 등 곧게 펴고 앉으세요';
       setLines(postureMsg, '', '준비 5초');
       await queueSpeech(postureMsg);
