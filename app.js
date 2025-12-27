@@ -3,6 +3,7 @@
   const progressLine = document.getElementById('progressLine');
   const detailLine = document.getElementById('detailLine');
   const startBtn = document.getElementById('startBtn');
+  const exerciseImage = document.getElementById('exerciseImage'); // 시작 화면 그림
 
   const SETTINGS = {
     sets: 3,
@@ -162,7 +163,7 @@
     startBtn.textContent = '진행 중...';
 
     try {
-      // 안전 자세 안내 (물결표 없음)
+      // 1) 자세 안내 (그림은 그대로 보임)
       const postureMsg = '의자에 엉덩이 완전히 붙이고 등 곧게 펴고 앉으세요';
       setLines(postureMsg, '', '준비 5초');
       await queueSpeech(postureMsg);
@@ -171,7 +172,12 @@
         setLines(postureMsg, '', `${s}초`);
       }, 'prep');
 
-      // 본 운동
+      // 2) 본격 운동 시작 시 그림 숨기기
+      if (exerciseImage) {
+        exerciseImage.style.display = 'none';
+      }
+
+      // 3) 세트 진행
       for (let setNo = 1; setNo <= SETTINGS.sets; setNo++) {
         await doSet(setNo);
       }
@@ -180,10 +186,11 @@
       startBtn.disabled = false;
       isRunning = false;
       speechQueue = [];
+      // 원하면 여기서 exerciseImage.display = 'block' 해서 다시 보이게 할 수도 있음
     }
   }
 
-  // 초기 화면
+  // 초기 화면: 그림 + 안내 문구
   setLines('버튼을 눌러 운동을 시작하세요', '', '');
   startBtn.addEventListener('click', startExercise);
 })();
