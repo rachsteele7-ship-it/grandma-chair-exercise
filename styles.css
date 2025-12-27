@@ -64,3 +64,6 @@ body {
   opacity: 0.6;
   cursor: not-allowed;
 }
+#message { pointer-events: none; }
+#startBtn { pointer-events: auto; position: relative; z-index: 2; }
+
