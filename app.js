@@ -57,15 +57,23 @@
     window.speechSynthesis.speak(utterance);
   }
 
-  const KOR = { 5: '다섯', 4: '넷', 3: '셋', 2: '둘', 1: '하나' };
+  // 증가형 카운트 (1→5)
+  const KOR = { 
+    1: '하나', 
+    2: '둘', 
+    3: '셋', 
+    4: '넷', 
+    5: '다섯' 
+  };
 
   function delay(ms) {
     return new Promise(r => setTimeout(r, ms));
   }
 
+  // 화면+음성 완벽 동기화 (증가형 1→5)
   async function syncedCountdown(seconds, onTick, speakType = 'count') {
-    for (let s = seconds; s >= 1; s -= 1) {
-      onTick(s);
+    for (let s = 1; s <= seconds; s += 1) {
+      onTick(s); // 화면: 1초 → 2초 → 3초 → 4초 → 5초
       
       if (speakType === 'count') {
         await queueSpeech(KOR[s] || String(s), { rate: 1.05 });
@@ -85,7 +93,7 @@
     const repText = `${repNo}/${SETTINGS.repsPerSide}회`;
 
     // 올리기: UI 먼저 + 음성 동시
-    setLines(`${sideText} 다리 올리세요`, `${setText} · ${repText}`, `${SETTINGS.liftSeconds}초`);
+    setLines(`${sideText} 다리 올리세요`, `${setText} · ${repText}`, `1초`);
     await queueSpeech(`${sideText} 다리 올리세요`);
     
     await syncedCountdown(SETTINGS.liftSeconds, (s) => {
@@ -110,7 +118,7 @@
 
   async function doSet(setNo) {
     const prepMsg = `${setNo}세트 시작합니다. 준비하세요.`;
-    setLines(prepMsg, '', `${SETTINGS.prepSeconds}초`);
+    setLines(prepMsg, '', `1초`);
     await queueSpeech(prepMsg);
 
     await syncedCountdown(SETTINGS.prepSeconds, (s) => {
