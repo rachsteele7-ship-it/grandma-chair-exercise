@@ -73,7 +73,8 @@
     for (let s = seconds; s >= 1; s -= 1) {
       onTick(s);
       // 카운트 음성: "하나 둘 셋" 느낌을 원해서 숫자만 또렷하게
-      speak(String(s));
+            speakCount(String(s));
+
       await delay(1000);
     }
   }
