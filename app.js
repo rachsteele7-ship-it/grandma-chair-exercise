@@ -23,9 +23,35 @@
   }
 
   // ---- 음성 ----
-  function speak(text) {
+    // ---- 음성 ----
+  function speakInstruction(text) {
     if (!SETTINGS.voice) return;
     if (!('speechSynthesis' in window)) return;
+
+    // 안내 문장은 확실히 새로 시작(이전 카운트 중지)
+    window.speechSynthesis.cancel();
+
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR';
+    u.rate = 0.95;
+    u.pitch = 1.0;
+    u.volume = 1.0;
+    window.speechSynthesis.speak(u);
+  }
+
+  function speakCount(text) {
+    if (!SETTINGS.voice) return;
+    if (!('speechSynthesis' in window)) return;
+
+    // ✅ 카운트는 cancel하지 않음 (안내 문장 끊지 않게)
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ko-KR';
+    u.rate = 1.05;
+    u.pitch = 1.0;
+    u.volume = 1.0;
+    window.speechSynthesis.speak(u);
+  }
+
 
     // 겹침 방지: 이전 발화 정리
     window.speechSynthesis.cancel();
