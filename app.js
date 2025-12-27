@@ -28,6 +28,8 @@
   }
 
   function queueSpeech(text, options = {}) {
+    if (!canSpeak()) return Promise.resolve();
+
     return new Promise((resolve) => {
       const utterance = new SpeechSynthesisUtterance(text);
       Object.assign(utterance, {
@@ -49,9 +51,9 @@
   }
 
   function processQueue() {
-    if (currentUtterance || speechQueue.length === 0) return;
+    if (currentUtterance || speechQueue.length === 0 || !canSpeak()) return;
     
-    const { utterance, resolve } = speechQueue.shift();
+    const { utterance } = speechQueue.shift();
     window.speechSynthesis.cancel();
     currentUtterance = utterance;
     window.speechSynthesis.speak(utterance);
@@ -70,15 +72,15 @@
     return new Promise(r => setTimeout(r, ms));
   }
 
-  // 화면+음성 완벽 동기화 (증가형 1→5)
+  // 화면+음성 동기화 카운트 (1 → seconds)
   async function syncedCountdown(seconds, onTick, speakType = 'count') {
     for (let s = 1; s <= seconds; s += 1) {
-      onTick(s); // 화면: 1초 → 2초 → 3초 → 4초 → 5초
-      
+      onTick(s); // 화면: 1초 → 2초 → ...
+
       if (speakType === 'count') {
         await queueSpeech(KOR[s] || String(s), { rate: 1.05 });
       }
-      
+
       await delay(1000);
     }
   }
@@ -97,15 +99,23 @@
     await queueSpeech(`${sideText} 다리 올리세요`);
     
     await syncedCountdown(SETTINGS.liftSeconds, (s) => {
-      setLines(`${sideText} 다리 올리세요`, `${setText} · ${repText}`, `${s}초`);
+      setLines(
+        `${sideText} 다리 올리세요`,
+        `${setText} · ${repText}`,
+        `${s}초`
+      );
     });
 
-    // 내리기: UI 먼저 + 음성 동시 (카운트 없음)
+    // 내리기: UI 먼저 + 음성 동시 (카운트 없음, 조용히 쉬기)
     setLines(`${sideText} 다리 내리세요`, `${setText} · ${repText}`, `${SETTINGS.lowerSeconds}초`);
     await queueSpeech(`${sideText} 다리 내리세요`);
     
     for (let s = SETTINGS.lowerSeconds; s >= 1; s -= 1) {
-      setLines(`${sideText} 다리 내리세요`, `${setText} · ${repText}`, `${s}초`);
+      setLines(
+        `${sideText} 다리 내리세요`,
+        `${setText} · ${repText}`,
+        `${s}초`
+      );
       await delay(1000);
     }
   }
@@ -123,7 +133,7 @@
 
     await syncedCountdown(SETTINGS.prepSeconds, (s) => {
       setLines(prepMsg, '', `${s}초`);
-    }, 'prep');
+    }, 'prep'); // 준비 구간은 숫자 음성 없음
 
     await doSide({ setNo, side: 'L' });
     await doSide({ setNo, side: 'R' });
@@ -135,7 +145,7 @@
       await queueSpeech(doneMsg);
       await delay(1000);
     } else {
-      // ✅ 음성과 화면 분리! 이모지 TTS 안 읽힘
+      // 음성과 화면 분리 → 이모지는 화면에만
       const finishMsg = '오늘 운동 완료! 수고하셨습니다';
       const displayMsg = finishMsg + ' 👍';
       
@@ -152,7 +162,7 @@
     startBtn.textContent = '진행 중...';
 
     try {
-      // ✅ ~ 완전 제거로 모든 기기 호환
+      // 안전 자세 안내 (물결표 없음)
       const postureMsg = '의자에 엉덩이 완전히 붙이고 등 곧게 펴고 앉으세요';
       setLines(postureMsg, '', '준비 5초');
       await queueSpeech(postureMsg);
@@ -161,7 +171,7 @@
         setLines(postureMsg, '', `${s}초`);
       }, 'prep');
 
-      // 기존 운동 시작
+      // 본 운동
       for (let setNo = 1; setNo <= SETTINGS.sets; setNo++) {
         await doSet(setNo);
       }
@@ -173,6 +183,7 @@
     }
   }
 
+  // 초기 화면
   setLines('버튼을 눌러 운동을 시작하세요', '', '');
   startBtn.addEventListener('click', startExercise);
 })();
