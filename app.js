@@ -73,7 +73,9 @@
     for (let s = seconds; s >= 1; s -= 1) {
       onTick(s);
       // 카운트 음성: "하나 둘 셋" 느낌을 원해서 숫자만 또렷하게
-            speakCount(String(s));
+            const kor = {5:'다섯',4:'넷',3:'셋',2:'둘',1:'하나'};
+speakCount(kor[s] || String(s));
+
 
       await delay(1000);
     }
@@ -89,7 +91,8 @@
     const repText = `${repNo}/${SETTINGS.repsPerSide}회`;
 
     // 1) 올리기
-    speak(`${sideText} 다리 올리세요`);
+    speakInstruction(`${sideText} 다리 올리세요`);
+
     await countdown(SETTINGS.liftSeconds, (s) => {
       setLines(
         `${sideText} 다리 올리세요`,
@@ -99,7 +102,8 @@
     });
 
     // 2) 내리기
-    speak(`${sideText} 다리 내리세요`);
+    speakInstruction(`${sideText} 다리 내리세요`);
+
     await countdown(SETTINGS.lowerSeconds, (s) => {
       setLines(
         `${sideText} 다리 내리세요`,
@@ -119,7 +123,8 @@
     // 세트 시작 안내
     const startMsg = `${setNo}세트 시작합니다. 준비하세요.`;
     setLines(startMsg, '', `${SETTINGS.prepSeconds}초`);
-    speak(startMsg);
+    speakInstruction(startMsg);
+
 
     await countdown(SETTINGS.prepSeconds, (s) => {
       setLines(`${setNo}세트 시작합니다. 준비하세요.`, '', `${s}초`);
@@ -133,11 +138,13 @@
     if (setNo < SETTINGS.sets) {
       const nextMsg = `${setNo}세트 완료하셨습니다. ${setNo + 1}세트 시작합니다. 준비하세요.`;
       setLines(`${setNo}세트 완료하셨습니다.`, '', `${setNo + 1}세트 시작 준비`);
-      speak(nextMsg);
+      speakInstruction(nextMsg);
+
       await delay(800);
     } else {
       setLines(`오늘 운동 완료! 👍`, '', `오늘도 수고하셨어요`);
-      speak('오늘 운동 완료! 오늘도 수고하셨어요');
+      speakInstruction('오늘 운동 완료! 오늘도 수고하셨어요');
+
     }
   }
 
