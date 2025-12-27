@@ -149,14 +149,14 @@
     startBtn.textContent = '진행 중...';
 
     try {
-      // ✅ 안전 자세 안내 (1순위 메시지)
-      const postureMsg = '의자에 엉덩이 완전히 붙이고, 등 곧게 펴고 앉으세요~';
+      // ✅ ~ 제거로 모든 기기 호환
+      const postureMsg = '의자에 엉덩이 완전히 붙이고 등 곧게 펴고 앉으세요';
       setLines(postureMsg, '', '준비 5초');
       await queueSpeech(postureMsg);
       
       await syncedCountdown(5, (s) => {
         setLines(postureMsg, '', `${s}초`);
-      }, 'prep'); // 카운트 음성 없이
+      }, 'prep');
 
       // 기존 운동 시작
       for (let setNo = 1; setNo <= SETTINGS.sets; setNo++) {
