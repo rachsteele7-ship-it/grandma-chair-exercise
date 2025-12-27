@@ -5,15 +5,17 @@
   const startBtn = document.getElementById('startBtn');
 
   const SETTINGS = {
-    sets: 3,          // 3세트
-    repsPerSide: 5,   // 왼쪽 5회 → 오른쪽 5회
-    liftSeconds: 5,   // 올리기 5초
-    lowerSeconds: 3,  // 내리기(쉬기) 3초
-    prepSeconds: 2,   // 세트 시작 전 준비 2초
-    voice: true,      // 음성 안내 on/off
+    sets: 3,
+    repsPerSide: 5,
+    liftSeconds: 5,
+    lowerSeconds: 3,
+    prepSeconds: 2,
+    voice: true,
   };
 
   let isRunning = false;
+  let speechQueue = [];
+  let currentUtterance = null;
 
   function setLines(action = '', progress = '', detail = '') {
     actionLine.textContent = action;
@@ -25,37 +27,50 @@
     return SETTINGS.voice && ('speechSynthesis' in window);
   }
 
-  function speakInstruction(text) {
-    if (!canSpeak()) return;
-    window.speechSynthesis.cancel(); // 안내 문장은 항상 새로 또렷하게
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ko-KR';
-    u.rate = 0.95;
-    u.pitch = 1.0;
-    u.volume = 1.0;
-    window.speechSynthesis.speak(u);
+  function queueSpeech(text, options = {}) {
+    return new Promise((resolve) => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      Object.assign(utterance, {
+        lang: 'ko-KR',
+        rate: options.rate || 0.95,
+        pitch: 1.0,
+        volume: 1.0,
+        ...options
+      });
+
+      utterance.onend = () => {
+        currentUtterance = null;
+        resolve();
+      };
+
+      speechQueue.push({ utterance, resolve });
+      processQueue();
+    });
   }
 
-  function speakCount(text) {
-    if (!canSpeak()) return;
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ko-KR';
-    u.rate = 1.05;
-    u.pitch = 1.0;
-    u.volume = 1.0;
-    window.speechSynthesis.speak(u);
+  function processQueue() {
+    if (currentUtterance || speechQueue.length === 0) return;
+    
+    const { utterance, resolve } = speechQueue.shift();
+    window.speechSynthesis.cancel();
+    currentUtterance = utterance;
+    window.speechSynthesis.speak(utterance);
   }
 
   const KOR = { 5: '다섯', 4: '넷', 3: '셋', 2: '둘', 1: '하나' };
 
   function delay(ms) {
-    return new Promise((r) => setTimeout(r, ms));
+    return new Promise(r => setTimeout(r, ms));
   }
 
-  async function countdown(seconds, onTick) {
+  async function syncedCountdown(seconds, onTick, speakType = 'count') {
     for (let s = seconds; s >= 1; s -= 1) {
       onTick(s);
-      speakCount(KOR[s] || String(s));
+      
+      if (speakType === 'count') {
+        await queueSpeech(KOR[s] || String(s), { rate: 1.05 });
+      }
+      
       await delay(1000);
     }
   }
@@ -69,52 +84,46 @@
     const setText = `${setNo}/${SETTINGS.sets}세트`;
     const repText = `${repNo}/${SETTINGS.repsPerSide}회`;
 
-    // 올리기
-    speakInstruction(`${sideText} 다리 올리세요`);
-    await countdown(SETTINGS.liftSeconds, (s) => {
-      setLines(
-        `${sideText} 다리 올리세요`,
-        `${setText} · ${repText}`,
-        `${s}초`
-      );
+    // 올리기 (카운트 있음)
+    await queueSpeech(`${sideText} 다리 올리세요`);
+    await syncedCountdown(SETTINGS.liftSeconds, (s) => {
+      setLines(`${sideText} 다리 올리세요`, `${setText} · ${repText}`, `${s}초`);
     });
 
-    // 내리기
-    speakInstruction(`${sideText} 다리 내리세요`);
-    await countdown(SETTINGS.lowerSeconds, (s) => {
-      setLines(
-        `${sideText} 다리 내리세요`,
-        `${setText} · ${repText}`,
-        `${s}초`
-      );
-    });
+    // 내리기 (카운트 없음, 조용히 쉬기)
+    await queueSpeech(`${sideText} 다리 내리세요`);
+    for (let s = SETTINGS.lowerSeconds; s >= 1; s -= 1) {
+      setLines(`${sideText} 다리 내리세요`, `${setText} · ${repText}`, `${s}초`);
+      await delay(1000);
+    }
   }
 
   async function doSide({ setNo, side }) {
-    for (let rep = 1; rep <= SETTINGS.repsPerSide; rep += 1) {
+    for (let rep = 1; rep <= SETTINGS.repsPerSide; rep++) {
       await doOneRep({ setNo, side, repNo: rep });
     }
   }
 
   async function doSet(setNo) {
     const prepMsg = `${setNo}세트 시작합니다. 준비하세요.`;
-    speakInstruction(prepMsg);
+    await queueSpeech(prepMsg);
 
-    await countdown(SETTINGS.prepSeconds, (s) => {
+    await syncedCountdown(SETTINGS.prepSeconds, (s) => {
       setLines(prepMsg, '', `${s}초`);
-    });
+    }, 'prep'); // 카운트 음성 없음
 
     await doSide({ setNo, side: 'L' });
     await doSide({ setNo, side: 'R' });
 
     if (setNo < SETTINGS.sets) {
-      const doneMsg = `${setNo}세트 완료하셨습니다.`;
-      setLines(doneMsg, '', `${setNo + 1}세트 준비`);
-      speakInstruction(`${doneMsg} ${setNo + 1}세트 시작합니다. 준비하세요.`);
-      await delay(800);
+      const doneMsg = `${setNo}세트 완료. ${setNo + 1}세트 준비하세요`;
+      setLines(doneMsg, '', '');
+      await queueSpeech(doneMsg);
+      await delay(1000);
     } else {
-      setLines('오늘 운동 완료! 👍', '', '오늘도 수고하셨어요');
-      speakInstruction('오늘 운동 완료! 오늘도 수고하셨어요');
+      const finishMsg = '오늘 운동 완료! 수고하셨습니다 👍';
+      setLines(finishMsg, '', '잘하셨어요!');
+      await queueSpeech(finishMsg);
     }
   }
 
@@ -126,17 +135,17 @@
     startBtn.textContent = '진행 중...';
 
     try {
-      for (let setNo = 1; setNo <= SETTINGS.sets; setNo += 1) {
+      for (let setNo = 1; setNo <= SETTINGS.sets; setNo++) {
         await doSet(setNo);
       }
       startBtn.textContent = '다시 시작';
     } finally {
       startBtn.disabled = false;
       isRunning = false;
+      speechQueue = [];
     }
   }
 
-  // 초기 화면
   setLines('버튼을 눌러 운동을 시작하세요', '', '');
   startBtn.addEventListener('click', startExercise);
 })();
