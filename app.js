@@ -1,14 +1,16 @@
-// 🔄 할머니들을 위한 자동 리셋 시스템 (맨 위에 추가)
+// 🔄 할머니들을 위한 스마트 리셋 시스템 (완전 수정버전)
 window.addEventListener('load', function() {
     localStorage.clear();
     sessionStorage.clear();
 });
 
 document.addEventListener('visibilitychange', function() {
-    if (!document.hidden) {
+    if (!document.hidden && typeof isRunning === 'undefined' || !isRunning) {
         localStorage.clear();
         sessionStorage.clear();
-        location.reload();
+        if (typeof setLines === 'function') {
+            setLines('버튼을 눌러 운동을 시작하세요', '', '');
+        }
     }
 });
 
