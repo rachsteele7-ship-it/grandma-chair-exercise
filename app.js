@@ -3,7 +3,6 @@
   const progressLine = document.getElementById('progressLine');
   const detailLine = document.getElementById('detailLine');
   const startBtn = document.getElementById('startBtn');
-  const exerciseImage = document.getElementById('exerciseImage'); // 시작 화면 그림
 
   const SETTINGS = {
     sets: 3,
@@ -60,7 +59,6 @@
     window.speechSynthesis.speak(utterance);
   }
 
-  // 증가형 카운트 (1→5)
   const KOR = { 
     1: '하나', 
     2: '둘', 
@@ -73,10 +71,9 @@
     return new Promise(r => setTimeout(r, ms));
   }
 
-  // 화면+음성 동기화 카운트 (1 → seconds)
   async function syncedCountdown(seconds, onTick, speakType = 'count') {
     for (let s = 1; s <= seconds; s += 1) {
-      onTick(s); // 화면: 1초 → 2초 → ...
+      onTick(s);
 
       if (speakType === 'count') {
         await queueSpeech(KOR[s] || String(s), { rate: 1.05 });
@@ -95,7 +92,7 @@
     const setText = `${setNo}/${SETTINGS.sets}세트`;
     const repText = `${repNo}/${SETTINGS.repsPerSide}회`;
 
-    // 올리기: UI 먼저 + 음성 동시
+    // 올리기
     setLines(`${sideText} 다리 올리세요`, `${setText} · ${repText}`, `1초`);
     await queueSpeech(`${sideText} 다리 올리세요`);
     
@@ -107,7 +104,7 @@
       );
     });
 
-    // 내리기: UI 먼저 + 음성 동시 (카운트 없음, 조용히 쉬기)
+    // 내리기 (카운트 없이 조용히 쉬기)
     setLines(`${sideText} 다리 내리세요`, `${setText} · ${repText}`, `${SETTINGS.lowerSeconds}초`);
     await queueSpeech(`${sideText} 다리 내리세요`);
     
@@ -134,7 +131,7 @@
 
     await syncedCountdown(SETTINGS.prepSeconds, (s) => {
       setLines(prepMsg, '', `${s}초`);
-    }, 'prep'); // 준비 구간은 숫자 음성 없음
+    }, 'prep');
 
     await doSide({ setNo, side: 'L' });
     await doSide({ setNo, side: 'R' });
@@ -146,7 +143,6 @@
       await queueSpeech(doneMsg);
       await delay(1000);
     } else {
-      // 음성과 화면 분리 → 이모지는 화면에만
       const finishMsg = '오늘 운동 완료! 수고하셨습니다';
       const displayMsg = finishMsg + ' 👍';
       
@@ -163,7 +159,6 @@
     startBtn.textContent = '진행 중...';
 
     try {
-      // 1) 자세 안내 (그림은 그대로 보임)
       const postureMsg = '의자에 엉덩이 완전히 붙이고 등 곧게 펴고 앉으세요';
       setLines(postureMsg, '', '준비 5초');
       await queueSpeech(postureMsg);
@@ -172,12 +167,6 @@
         setLines(postureMsg, '', `${s}초`);
       }, 'prep');
 
-      // 2) 본격 운동 시작 시 그림 숨기기
-      if (exerciseImage) {
-        exerciseImage.style.display = 'none';
-      }
-
-      // 3) 세트 진행
       for (let setNo = 1; setNo <= SETTINGS.sets; setNo++) {
         await doSet(setNo);
       }
@@ -186,11 +175,9 @@
       startBtn.disabled = false;
       isRunning = false;
       speechQueue = [];
-      // 원하면 여기서 exerciseImage.display = 'block' 해서 다시 보이게 할 수도 있음
     }
   }
 
-  // 초기 화면: 그림 + 안내 문구
   setLines('버튼을 눌러 운동을 시작하세요', '', '');
   startBtn.addEventListener('click', startExercise);
 })();
