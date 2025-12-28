@@ -1,8 +1,19 @@
-// 🔄 화면 잠금 freeze 방지 (맨 위에 추가!)
+// 🔄 할머니들을 위한 자동 리셋 시스템 (맨 위에 추가)
+window.addEventListener('load', function() {
+    localStorage.clear();
+    sessionStorage.clear();
+});
+
 document.addEventListener('visibilitychange', function() {
     if (!document.hidden) {
-        setTimeout(() => location.reload(), 200);
+        localStorage.clear();
+        sessionStorage.clear();
+        location.reload();
     }
+});
+
+window.addEventListener('beforeunload', function() {
+    localStorage.clear();
 });
 
 (() => {
