@@ -1,3 +1,15 @@
+// 🔄 화면 잠금 후 자동 리셋 (맨 위에 추가)
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        setTimeout(() => {
+            location.reload();
+        }, 200);
+    }
+});
+
+(() => {
+  // 기존 코드 그대로 유지
+
 (() => {
   const actionLine = document.getElementById('actionLine');
   const progressLine = document.getElementById('progressLine');
