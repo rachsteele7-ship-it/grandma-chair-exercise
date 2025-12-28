@@ -1,3 +1,17 @@
+// 🔄 freeze 방지 (원본 방식)
+window.addEventListener('load', function() {
+    localStorage.clear();
+    sessionStorage.clear();
+});
+
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        localStorage.clear();
+        sessionStorage.clear();
+        location.reload();
+    }
+});
+
 (() => {
   const actionLine = document.getElementById('actionLine');
   const progressLine = document.getElementById('progressLine');
@@ -5,33 +19,17 @@
   const startBtn = document.getElementById('startBtn');
 
   const SETTINGS = {
-    sets: 3, repsPerSide: 5, liftSeconds: 5, lowerSeconds: 3, prepSeconds: 2, voice: true,
+    sets: 3,
+    repsPerSide: 5,
+    liftSeconds: 5,
+    lowerSeconds: 3,
+    prepSeconds: 2,
+    voice: true,
   };
 
   let isRunning = false;
   let speechQueue = [];
   let currentUtterance = null;
-  let wakeLock = null;
-
-  // 🔒 화면 잠금 방지
-  async function requestWakeLock() {
-    if ('wakeLock' in navigator) {
-      try {
-        wakeLock = await navigator.wakeLock.request('screen');
-      } catch (err) {
-        console.log('Wake Lock 안됨:', err);
-      }
-    }
-  }
-
-  async function releaseWakeLock() {
-    if (wakeLock) {
-      try {
-        await wakeLock.release();
-        wakeLock = null;
-      } catch (err) {}
-    }
-  }
 
   function setLines(action = '', progress = '', detail = '') {
     actionLine.textContent = action;
@@ -43,9 +41,18 @@
     return new Promise((resolve) => {
       const utterance = new SpeechSynthesisUtterance(text);
       Object.assign(utterance, {
-        lang: 'ko-KR', rate: options.rate || 0.95, pitch: 1.0, volume: 1.0, ...options
+        lang: 'ko-KR',
+        rate: options.rate || 0.95,
+        pitch: 1.0,
+        volume: 1.0,
+        ...options
       });
-      utterance.onend = () => { currentUtterance = null; resolve(); };
+
+      utterance.onend = () => {
+        currentUtterance = null;
+        resolve();
+      };
+
       speechQueue.push({ utterance, resolve });
       processQueue();
     });
@@ -53,6 +60,7 @@
 
   function processQueue() {
     if (currentUtterance || speechQueue.length === 0) return;
+    
     const { utterance, resolve } = speechQueue.shift();
     window.speechSynthesis.cancel();
     currentUtterance = utterance;
@@ -68,14 +76,18 @@
   async function syncedCountdown(seconds, onTick, speakType = 'count') {
     for (let s = 1; s <= seconds; s += 1) {
       onTick(s);
+      
       if (speakType === 'count') {
         await queueSpeech(KOR[s] || String(s), { rate: 1.05 });
       }
+      
       await delay(1000);
     }
   }
 
-  function sideLabel(side) { return side === 'L' ? '왼쪽' : '오른쪽'; }
+  function sideLabel(side) {
+    return side === 'L' ? '왼쪽' : '오른쪽';
+  }
 
   async function doOneRep({ setNo, side, repNo }) {
     const sideText = sideLabel(side);
@@ -124,15 +136,15 @@
       await delay(1000);
     } else {
       const finishMsg = '오늘 운동 완료! 수고하셨습니다';
-      setLines(finishMsg + ' 👍', '', '잘하셨어요!');
+      const displayMsg = finishMsg + ' 👍';
+      
+      setLines(displayMsg, '', '잘하셨어요!');
       await queueSpeech(finishMsg);
     }
   }
 
   async function startExercise() {
     if (isRunning) return;
-    
-    await requestWakeLock();  // 화면 잠금 해제
     isRunning = true;
 
     startBtn.disabled = true;
@@ -143,7 +155,9 @@
       setLines(postureMsg, '', '준비 5초');
       await queueSpeech(postureMsg);
       
-      await syncedCountdown(5, (s) => setLines(postureMsg, '', `${s}초`), 'prep');
+      await syncedCountdown(5, (s) => {
+        setLines(postureMsg, '', `${s}초`);
+      }, 'prep');
 
       for (let setNo = 1; setNo <= SETTINGS.sets; setNo++) {
         await doSet(setNo);
@@ -153,7 +167,6 @@
       startBtn.disabled = false;
       isRunning = false;
       speechQueue = [];
-      await releaseWakeLock();  // 화면 잠금 복구
     }
   }
 
