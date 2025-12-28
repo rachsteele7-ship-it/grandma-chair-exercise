@@ -1,3 +1,21 @@
+// 🔄 할머니들을 위한 자동 리셋 시스템 (맨 위에 추가)
+window.addEventListener('load', function() {
+    localStorage.clear();
+    sessionStorage.clear();
+});
+
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        localStorage.clear();
+        sessionStorage.clear();
+        location.reload();
+    }
+});
+
+window.addEventListener('beforeunload', function() {
+    localStorage.clear();
+});
+
 (() => {
   const actionLine = document.getElementById('actionLine');
   const progressLine = document.getElementById('progressLine');
