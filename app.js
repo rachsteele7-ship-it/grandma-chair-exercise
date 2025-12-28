@@ -1,28 +1,21 @@
-// 🔄 화면 잠금 대응 완벽 시스템
-let appVisibleTime = Date.now();
-let pauseStartTime = null;
+// 🔒 운동 중 화면 자동잠금 OFF!
+let wakeLock = null;
 
-window.addEventListener('load', function() {
-    localStorage.clear();
-    sessionStorage.clear();
-});
+async function requestWakeLock() {
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    console.log('화면 잠금 해제됨');
+  } catch (err) {
+    console.log('Wake Lock 실패:', err);
+  }
+}
 
-document.addEventListener('visibilitychange', function() {
-    if (document.hidden) {
-        // 화면 꺼짐: 시간 기록
-        pauseStartTime = Date.now();
-    } else {
-        // 화면 켜짐: 운동 중이면 계속 진행
-        if (isRunning && pauseStartTime) {
-            const pauseDuration = Date.now() - pauseStartTime;
-            appVisibleTime += pauseDuration; // 보상 시간 추가
-            pauseStartTime = null;
-        } else if (!isRunning) {
-            // 운동 안 할 때만 초기화
-            setLines('버튼을 눌러 운동을 시작하세요', '', '');
-        }
-    }
-});
+async function releaseWakeLock() {
+  if (wakeLock) {
+    await wakeLock.release();
+    wakeLock = null;
+  }
+}
 
 (() => {
   const actionLine = document.getElementById('actionLine');
@@ -31,12 +24,7 @@ document.addEventListener('visibilitychange', function() {
   const startBtn = document.getElementById('startBtn');
 
   const SETTINGS = {
-    sets: 3,
-    repsPerSide: 5,
-    liftSeconds: 5,
-    lowerSeconds: 3,
-    prepSeconds: 2,
-    voice: true,
+    sets: 3, repsPerSide: 5, liftSeconds: 5, lowerSeconds: 3, prepSeconds: 2, voice: true,
   };
 
   let isRunning = false;
@@ -49,26 +37,13 @@ document.addEventListener('visibilitychange', function() {
     detailLine.textContent = detail;
   }
 
-  function canSpeak() {
-    return SETTINGS.voice && ('speechSynthesis' in window);
-  }
-
   function queueSpeech(text, options = {}) {
     return new Promise((resolve) => {
       const utterance = new SpeechSynthesisUtterance(text);
       Object.assign(utterance, {
-        lang: 'ko-KR',
-        rate: options.rate || 0.95,
-        pitch: 1.0,
-        volume: 1.0,
-        ...options
+        lang: 'ko-KR', rate: options.rate || 0.95, pitch: 1.0, volume: 1.0, ...options
       });
-
-      utterance.onend = () => {
-        currentUtterance = null;
-        resolve();
-      };
-
+      utterance.onend = () => { currentUtterance = null; resolve(); };
       speechQueue.push({ utterance, resolve });
       processQueue();
     });
@@ -76,16 +51,13 @@ document.addEventListener('visibilitychange', function() {
 
   function processQueue() {
     if (currentUtterance || speechQueue.length === 0) return;
-    
     const { utterance, resolve } = speechQueue.shift();
     window.speechSynthesis.cancel();
     currentUtterance = utterance;
     window.speechSynthesis.speak(utterance);
   }
 
-  const KOR = { 
-    1: '하나', 2: '둘', 3: '셋', 4: '넷', 5: '다섯' 
-  };
+  const KOR = { 1: '하나', 2: '둘', 3: '셋', 4: '넷', 5: '다섯' };
 
   function delay(ms) {
     return new Promise(r => setTimeout(r, ms));
@@ -94,18 +66,14 @@ document.addEventListener('visibilitychange', function() {
   async function syncedCountdown(seconds, onTick, speakType = 'count') {
     for (let s = 1; s <= seconds; s += 1) {
       onTick(s);
-      
       if (speakType === 'count') {
         await queueSpeech(KOR[s] || String(s), { rate: 1.05 });
       }
-      
       await delay(1000);
     }
   }
 
-  function sideLabel(side) {
-    return side === 'L' ? '왼쪽' : '오른쪽';
-  }
+  function sideLabel(side) { return side === 'L' ? '왼쪽' : '오른쪽'; }
 
   async function doOneRep({ setNo, side, repNo }) {
     const sideText = sideLabel(side);
@@ -154,15 +122,16 @@ document.addEventListener('visibilitychange', function() {
       await delay(1000);
     } else {
       const finishMsg = '오늘 운동 완료! 수고하셨습니다';
-      const displayMsg = finishMsg + ' 👍';
-      
-      setLines(displayMsg, '', '잘하셨어요!');
+      setLines(finishMsg + ' 👍', '', '잘하셨어요!');
       await queueSpeech(finishMsg);
     }
   }
 
   async function startExercise() {
     if (isRunning) return;
+    
+    // 🔒 운동 시작 시 화면 잠금 해제
+    await requestWakeLock();
     isRunning = true;
 
     startBtn.disabled = true;
@@ -173,9 +142,7 @@ document.addEventListener('visibilitychange', function() {
       setLines(postureMsg, '', '준비 5초');
       await queueSpeech(postureMsg);
       
-      await syncedCountdown(5, (s) => {
-        setLines(postureMsg, '', `${s}초`);
-      }, 'prep');
+      await syncedCountdown(5, (s) => setLines(postureMsg, '', `${s}초`), 'prep');
 
       for (let setNo = 1; setNo <= SETTINGS.sets; setNo++) {
         await doSet(setNo);
@@ -185,6 +152,8 @@ document.addEventListener('visibilitychange', function() {
       startBtn.disabled = false;
       isRunning = false;
       speechQueue = [];
+      // 🔓 운동 끝나면 화면 잠금 복구
+      await releaseWakeLock();
     }
   }
 
