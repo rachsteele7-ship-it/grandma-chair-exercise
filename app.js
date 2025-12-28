@@ -1,17 +1,3 @@
-// 🔄 freeze 방지 (원본 방식)
-window.addEventListener('load', function() {
-    localStorage.clear();
-    sessionStorage.clear();
-});
-
-document.addEventListener('visibilitychange', function() {
-    if (!document.hidden) {
-        localStorage.clear();
-        sessionStorage.clear();
-        location.reload();
-    }
-});
-
 (() => {
   const actionLine = document.getElementById('actionLine');
   const progressLine = document.getElementById('progressLine');
@@ -47,12 +33,7 @@ document.addEventListener('visibilitychange', function() {
         volume: 1.0,
         ...options
       });
-
-      utterance.onend = () => {
-        currentUtterance = null;
-        resolve();
-      };
-
+      utterance.onend = () => { currentUtterance = null; resolve(); };
       speechQueue.push({ utterance, resolve });
       processQueue();
     });
@@ -60,7 +41,6 @@ document.addEventListener('visibilitychange', function() {
 
   function processQueue() {
     if (currentUtterance || speechQueue.length === 0) return;
-    
     const { utterance, resolve } = speechQueue.shift();
     window.speechSynthesis.cancel();
     currentUtterance = utterance;
@@ -76,18 +56,14 @@ document.addEventListener('visibilitychange', function() {
   async function syncedCountdown(seconds, onTick, speakType = 'count') {
     for (let s = 1; s <= seconds; s += 1) {
       onTick(s);
-      
       if (speakType === 'count') {
         await queueSpeech(KOR[s] || String(s), { rate: 1.05 });
       }
-      
       await delay(1000);
     }
   }
 
-  function sideLabel(side) {
-    return side === 'L' ? '왼쪽' : '오른쪽';
-  }
+  function sideLabel(side) { return side === 'L' ? '왼쪽' : '오른쪽'; }
 
   async function doOneRep({ setNo, side, repNo }) {
     const sideText = sideLabel(side);
@@ -136,9 +112,7 @@ document.addEventListener('visibilitychange', function() {
       await delay(1000);
     } else {
       const finishMsg = '오늘 운동 완료! 수고하셨습니다';
-      const displayMsg = finishMsg + ' 👍';
-      
-      setLines(displayMsg, '', '잘하셨어요!');
+      setLines(finishMsg + ' 👍', '', '잘하셨어요!');
       await queueSpeech(finishMsg);
     }
   }
@@ -155,9 +129,7 @@ document.addEventListener('visibilitychange', function() {
       setLines(postureMsg, '', '준비 5초');
       await queueSpeech(postureMsg);
       
-      await syncedCountdown(5, (s) => {
-        setLines(postureMsg, '', `${s}초`);
-      }, 'prep');
+      await syncedCountdown(5, (s) => setLines(postureMsg, '', `${s}초`), 'prep');
 
       for (let setNo = 1; setNo <= SETTINGS.sets; setNo++) {
         await doSet(setNo);
