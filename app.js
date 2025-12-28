@@ -1,22 +1,3 @@
-// 🔒 운동 중 화면 자동잠금 OFF!
-let wakeLock = null;
-
-async function requestWakeLock() {
-  try {
-    wakeLock = await navigator.wakeLock.request('screen');
-    console.log('화면 잠금 해제됨');
-  } catch (err) {
-    console.log('Wake Lock 실패:', err);
-  }
-}
-
-async function releaseWakeLock() {
-  if (wakeLock) {
-    await wakeLock.release();
-    wakeLock = null;
-  }
-}
-
 (() => {
   const actionLine = document.getElementById('actionLine');
   const progressLine = document.getElementById('progressLine');
@@ -30,6 +11,27 @@ async function releaseWakeLock() {
   let isRunning = false;
   let speechQueue = [];
   let currentUtterance = null;
+  let wakeLock = null;
+
+  // 🔒 화면 잠금 방지
+  async function requestWakeLock() {
+    if ('wakeLock' in navigator) {
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+      } catch (err) {
+        console.log('Wake Lock 안됨:', err);
+      }
+    }
+  }
+
+  async function releaseWakeLock() {
+    if (wakeLock) {
+      try {
+        await wakeLock.release();
+        wakeLock = null;
+      } catch (err) {}
+    }
+  }
 
   function setLines(action = '', progress = '', detail = '') {
     actionLine.textContent = action;
@@ -130,8 +132,7 @@ async function releaseWakeLock() {
   async function startExercise() {
     if (isRunning) return;
     
-    // 🔒 운동 시작 시 화면 잠금 해제
-    await requestWakeLock();
+    await requestWakeLock();  // 화면 잠금 해제
     isRunning = true;
 
     startBtn.disabled = true;
@@ -152,8 +153,7 @@ async function releaseWakeLock() {
       startBtn.disabled = false;
       isRunning = false;
       speechQueue = [];
-      // 🔓 운동 끝나면 화면 잠금 복구
-      await releaseWakeLock();
+      await releaseWakeLock();  // 화면 잠금 복구
     }
   }
 
