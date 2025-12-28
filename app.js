@@ -1,3 +1,10 @@
+// 🔄 화면 잠금 freeze 방지 (맨 위에 추가!)
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        setTimeout(() => location.reload(), 200);
+    }
+});
+
 (() => {
   const actionLine = document.getElementById('actionLine');
   const progressLine = document.getElementById('progressLine');
