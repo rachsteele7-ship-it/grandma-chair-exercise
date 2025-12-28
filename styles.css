@@ -85,14 +85,3 @@ body {
 
 #message { pointer-events: none; }
 #startBtn { pointer-events: auto; position: relative; z-index: 2; }
-
-/* 시작 화면 이미지 스타일 */
-#exerciseImage {
-  width: 100%;
-  max-width: 420px;
-  border-radius: 16px;
-  margin-bottom: 16px;
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-}
