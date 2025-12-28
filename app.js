@@ -1,21 +1,27 @@
-// 🔄 할머니들을 위한 스마트 리셋 시스템 (완전 수정버전)
+// 🔄 화면 잠금 대응 완벽 시스템
+let appVisibleTime = Date.now();
+let pauseStartTime = null;
+
 window.addEventListener('load', function() {
     localStorage.clear();
     sessionStorage.clear();
 });
 
 document.addEventListener('visibilitychange', function() {
-    if (!document.hidden && typeof isRunning === 'undefined' || !isRunning) {
-        localStorage.clear();
-        sessionStorage.clear();
-        if (typeof setLines === 'function') {
+    if (document.hidden) {
+        // 화면 꺼짐: 시간 기록
+        pauseStartTime = Date.now();
+    } else {
+        // 화면 켜짐: 운동 중이면 계속 진행
+        if (isRunning && pauseStartTime) {
+            const pauseDuration = Date.now() - pauseStartTime;
+            appVisibleTime += pauseDuration; // 보상 시간 추가
+            pauseStartTime = null;
+        } else if (!isRunning) {
+            // 운동 안 할 때만 초기화
             setLines('버튼을 눌러 운동을 시작하세요', '', '');
         }
     }
-});
-
-window.addEventListener('beforeunload', function() {
-    localStorage.clear();
 });
 
 (() => {
@@ -77,23 +83,17 @@ window.addEventListener('beforeunload', function() {
     window.speechSynthesis.speak(utterance);
   }
 
-  // 증가형 카운트 (1→5)
   const KOR = { 
-    1: '하나', 
-    2: '둘', 
-    3: '셋', 
-    4: '넷', 
-    5: '다섯' 
+    1: '하나', 2: '둘', 3: '셋', 4: '넷', 5: '다섯' 
   };
 
   function delay(ms) {
     return new Promise(r => setTimeout(r, ms));
   }
 
-  // 화면+음성 완벽 동기화 (증가형 1→5)
   async function syncedCountdown(seconds, onTick, speakType = 'count') {
     for (let s = 1; s <= seconds; s += 1) {
-      onTick(s); // 화면: 1초 → 2초 → 3초 → 4초 → 5초
+      onTick(s);
       
       if (speakType === 'count') {
         await queueSpeech(KOR[s] || String(s), { rate: 1.05 });
@@ -112,7 +112,6 @@ window.addEventListener('beforeunload', function() {
     const setText = `${setNo}/${SETTINGS.sets}세트`;
     const repText = `${repNo}/${SETTINGS.repsPerSide}회`;
 
-    // 올리기: UI 먼저 + 음성 동시
     setLines(`${sideText} 다리 올리세요`, `${setText} · ${repText}`, `1초`);
     await queueSpeech(`${sideText} 다리 올리세요`);
     
@@ -120,7 +119,6 @@ window.addEventListener('beforeunload', function() {
       setLines(`${sideText} 다리 올리세요`, `${setText} · ${repText}`, `${s}초`);
     });
 
-    // 내리기: UI 먼저 + 음성 동시 (카운트 없음)
     setLines(`${sideText} 다리 내리세요`, `${setText} · ${repText}`, `${SETTINGS.lowerSeconds}초`);
     await queueSpeech(`${sideText} 다리 내리세요`);
     
@@ -155,7 +153,6 @@ window.addEventListener('beforeunload', function() {
       await queueSpeech(doneMsg);
       await delay(1000);
     } else {
-      // ✅ 음성과 화면 분리! 이모지 TTS 안 읽힘
       const finishMsg = '오늘 운동 완료! 수고하셨습니다';
       const displayMsg = finishMsg + ' 👍';
       
@@ -172,7 +169,6 @@ window.addEventListener('beforeunload', function() {
     startBtn.textContent = '진행 중...';
 
     try {
-      // ✅ ~ 완전 제거로 모든 기기 호환
       const postureMsg = '의자에 엉덩이 완전히 붙이고 등 곧게 펴고 앉으세요';
       setLines(postureMsg, '', '준비 5초');
       await queueSpeech(postureMsg);
@@ -181,7 +177,6 @@ window.addEventListener('beforeunload', function() {
         setLines(postureMsg, '', `${s}초`);
       }, 'prep');
 
-      // 기존 운동 시작
       for (let setNo = 1; setNo <= SETTINGS.sets; setNo++) {
         await doSet(setNo);
       }
