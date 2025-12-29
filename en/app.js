@@ -1,20 +1,19 @@
-
-// 🔄 할머니들을 위한 자동 리셋 시스템 (맨 위에 추가)
+// 🔄 Auto reset system (for simple use)
 window.addEventListener('load', function() {
-    localStorage.clear();
-    sessionStorage.clear();
+  localStorage.clear();
+  sessionStorage.clear();
 });
 
 document.addEventListener('visibilitychange', function() {
-    if (!document.hidden) {
-        localStorage.clear();
-        sessionStorage.clear();
-        location.reload();
-    }
+  if (!document.hidden) {
+    localStorage.clear();
+    sessionStorage.clear();
+    location.reload();
+  }
 });
 
 window.addEventListener('beforeunload', function() {
-    localStorage.clear();
+  localStorage.clear();
 });
 
 (() => {
@@ -47,10 +46,13 @@ window.addEventListener('beforeunload', function() {
   }
 
   function queueSpeech(text, options = {}) {
+    // If voice is off / unsupported, keep timing behaviour consistent.
+    if (!canSpeak()) return Promise.resolve();
+
     return new Promise((resolve) => {
       const utterance = new SpeechSynthesisUtterance(text);
       Object.assign(utterance, {
-        lang: 'ko-KR',
+        lang: 'en-GB',
         rate: options.rate || 0.95,
         pitch: 1.0,
         volume: 1.0,
@@ -69,62 +71,53 @@ window.addEventListener('beforeunload', function() {
 
   function processQueue() {
     if (currentUtterance || speechQueue.length === 0) return;
-    
-    const { utterance, resolve } = speechQueue.shift();
+
+    const { utterance } = speechQueue.shift();
     window.speechSynthesis.cancel();
     currentUtterance = utterance;
     window.speechSynthesis.speak(utterance);
   }
 
-  // 증가형 카운트 (1→5)
-  const KOR = { 
-    1: '하나', 
-    2: '둘', 
-    3: '셋', 
-    4: '넷', 
-    5: '다섯' 
-  };
-
   function delay(ms) {
     return new Promise(r => setTimeout(r, ms));
   }
 
-  // 화면+음성 완벽 동기화 (증가형 1→5)
+  // Synced count up (1 → seconds)
   async function syncedCountdown(seconds, onTick, speakType = 'count') {
     for (let s = 1; s <= seconds; s += 1) {
-      onTick(s); // 화면: 1초 → 2초 → 3초 → 4초 → 5초
-      
+      onTick(s); // screen: 1 → 2 → 3 → 4 → 5
+
       if (speakType === 'count') {
-        await queueSpeech(KOR[s] || String(s), { rate: 1.05 });
+        await queueSpeech(String(s), { rate: 1.05 });
       }
-      
+
       await delay(1000);
     }
   }
 
   function sideLabel(side) {
-    return side === 'L' ? '왼쪽' : '오른쪽';
+    return side === 'L' ? 'Left' : 'Right';
   }
 
   async function doOneRep({ setNo, side, repNo }) {
     const sideText = sideLabel(side);
-    const setText = `${setNo}/${SETTINGS.sets}세트`;
-    const repText = `${repNo}/${SETTINGS.repsPerSide}회`;
+    const setText = `Set ${setNo} of ${SETTINGS.sets}`;
+    const repText = `Rep ${repNo} of ${SETTINGS.repsPerSide}`;
 
-    // 올리기: UI 먼저 + 음성 동시
-    setLines(`${sideText} 다리 올리세요`, `${setText} · ${repText}`, `1초`);
-    await queueSpeech(`${sideText} 다리 올리세요`);
-    
+    // Lift: UI first + voice
+    setLines(`${sideText} leg up`, `${setText} · ${repText}`, `1 s`);
+    await queueSpeech(`${sideText} leg up`);
+
     await syncedCountdown(SETTINGS.liftSeconds, (s) => {
-      setLines(`${sideText} 다리 올리세요`, `${setText} · ${repText}`, `${s}초`);
+      setLines(`${sideText} leg up`, `${setText} · ${repText}`, `${s} s`);
     });
 
-    // 내리기: UI 먼저 + 음성 동시 (카운트 없음)
-    setLines(`${sideText} 다리 내리세요`, `${setText} · ${repText}`, `${SETTINGS.lowerSeconds}초`);
-    await queueSpeech(`${sideText} 다리 내리세요`);
-    
+    // Lower: UI first + voice (no spoken count)
+    setLines(`${sideText} leg down`, `${setText} · ${repText}`, `${SETTINGS.lowerSeconds} s`);
+    await queueSpeech(`${sideText} leg down`);
+
     for (let s = SETTINGS.lowerSeconds; s >= 1; s -= 1) {
-      setLines(`${sideText} 다리 내리세요`, `${setText} · ${repText}`, `${s}초`);
+      setLines(`${sideText} leg down`, `${setText} · ${repText}`, `${s} s`);
       await delay(1000);
     }
   }
@@ -136,12 +129,12 @@ window.addEventListener('beforeunload', function() {
   }
 
   async function doSet(setNo) {
-    const prepMsg = `${setNo}세트 시작합니다. 준비하세요.`;
-    setLines(prepMsg, '', `1초`);
+    const prepMsg = `Starting set ${setNo}. Get ready.`;
+    setLines(prepMsg, '', `1 s`);
     await queueSpeech(prepMsg);
 
     await syncedCountdown(SETTINGS.prepSeconds, (s) => {
-      setLines(prepMsg, '', `${s}초`);
+      setLines(prepMsg, '', `${s} s`);
     }, 'prep');
 
     await doSide({ setNo, side: 'L' });
@@ -149,16 +142,16 @@ window.addEventListener('beforeunload', function() {
 
     if (setNo < SETTINGS.sets) {
       const nextSet = setNo + 1;
-      const doneMsg = `${setNo}번째 세트 완료. ${nextSet}번째 세트 준비합니다.`;
+      const doneMsg = `Set ${setNo} complete. Get ready for set ${nextSet}.`;
       setLines(doneMsg, '', '');
       await queueSpeech(doneMsg);
       await delay(1000);
     } else {
-      // ✅ 음성과 화면 분리! 이모지 TTS 안 읽힘
-      const finishMsg = '오늘 운동 완료! 수고하셨습니다';
+      // Keep emoji off TTS
+      const finishMsg = 'Workout complete. Well done.';
       const displayMsg = finishMsg + ' 👍';
-      
-      setLines(displayMsg, '', '잘하셨어요!');
+
+      setLines(displayMsg, '', 'Great job!');
       await queueSpeech(finishMsg);
     }
   }
@@ -168,23 +161,22 @@ window.addEventListener('beforeunload', function() {
     isRunning = true;
 
     startBtn.disabled = true;
-    startBtn.textContent = '진행 중...';
+    startBtn.textContent = 'In progress…';
 
     try {
-      // ✅ ~ 완전 제거로 모든 기기 호환
-      const postureMsg = '의자에 엉덩이 완전히 붙이고 등 곧게 펴고 앉으세요';
-      setLines(postureMsg, '', '준비 5초');
+      const postureMsg = 'Sit tall on the chair. Keep your back straight.';
+      setLines(postureMsg, '', 'Get ready: 5 s');
       await queueSpeech(postureMsg);
-      
+
       await syncedCountdown(5, (s) => {
-        setLines(postureMsg, '', `${s}초`);
+        setLines(postureMsg, '', `${s} s`);
       }, 'prep');
 
-      // 기존 운동 시작
       for (let setNo = 1; setNo <= SETTINGS.sets; setNo++) {
         await doSet(setNo);
       }
-      startBtn.textContent = '다시 시작';
+
+      startBtn.textContent = 'Start again';
     } finally {
       startBtn.disabled = false;
       isRunning = false;
@@ -192,6 +184,6 @@ window.addEventListener('beforeunload', function() {
     }
   }
 
-  setLines('버튼을 눌러 운동을 시작하세요', '', '');
+  setLines('Press the button to start.', '', '');
   startBtn.addEventListener('click', startExercise);
 })();
