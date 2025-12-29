@@ -1,22 +1,22 @@
 {
-  "name": "할머니 다리 운동",
-  "short_name": "다리운동",
-  "start_url": ".",
+  "name": "Chair Leg Workout",
+  "short_name": "Leg Workout",
+  "description": "Simple chair exercise. Lift one leg at a time and hold for 5 seconds.",
+  "start_url": "/grandma-chair-exercise/en/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "../icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "icon-512.png",
+      "src": "../icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
   ]
 }
-
